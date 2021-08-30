@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor as thrd
 
 log_file = "proxy_py_log.txt"
 header = {"user-agent": "Mozilla/5.0 (Linux; Android 6.0.1; Redmi Note 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Mobile Safari/537.36"}
+try: os.remove(log_file)
+except: pass
 
 class Proxy:
 	def __init__(self):
@@ -14,7 +16,7 @@ class Proxy:
 			"Connection": "keep-alive"}
 		try:
 			self.sess = requests.Session()
-			self.sess.get(self.base_url+"/ip", headers=self.headers)
+			self.sess.get(self.url+"/ip", headers=self.headers)
 		except Exception as e:
 			print(" [!] Please Check Your Internet Connection")
 			open(log_file, "a").write(str(e)+"\n")
@@ -51,8 +53,16 @@ def banner():
 """)
 
 def checkProxy(px, saveTo, proxy):
+	global success, filed
 	status = px.check(proxy)
-	if status: open(saveTo, 'a').write("\n"+proxy)
+	print(proxy)
+	if status:
+		open(saveTo, 'a').write("\n"+proxy)
+		success+=1
+	else:
+		filed+=1
+	print(f"\n [Success >> {str(success)}]--[Total >> {str(total)}]--[Filed >> {str(filed)}]")
+
 
 def loadProxy(path):
 	try:
@@ -82,16 +92,35 @@ def setSave():
 	return saveTo
 
 
+def setThread():
+	while True:
+		try:
+			num = int(input(" Input thread (default 50) : "))
+			break
+		except:
+			print(" [!] Invalid input")
+	return num
+
+
 def menu():
+	global success, filed, total
+	clr()
+	banner()
 	print(""" Menu :
  [1] Proxy checker
  [0] Exit
 """)
+	success, filed, total = 0, 0, 0
 	choice = str(input(" Choice : "))
 	if choice == "1":
-		data = loadProxy()
+		data = loadProxy(str(input(" File list proxy : ")))
+		total = len(data)
 		saveTo = setSave()
+		t = setThread()
 		px = Proxy()
-		with thrd(max_workers=100) as pool:
+		with thrd(max_workers=t) as pool:
 			for i in data:
-				pool.submit(checkProxy, saveTo, i)
+				pool.submit(checkProxy, px, saveTo, i)
+
+
+menu()
