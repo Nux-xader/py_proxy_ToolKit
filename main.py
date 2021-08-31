@@ -135,7 +135,7 @@ def banner():
  █▀▀ █▀▄ █▄█ █ █  █ 
  
  █▀█ █▄█
- █▀▀  █  V 1.0.0
+ █▀▀  █  V 1.0.1
 
  About Developer : https://github.com/Nux-xader
  Contact         : https://wa.me/+6281251389915
