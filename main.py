@@ -26,14 +26,22 @@ class Proxy:
 		dummy_sess = self.sess
 		try:
 			ip = dummy_sess.get(self.url+"/ip", headers=self.headers, 
-				proxies={"http": proxy,"https": proxy}, timeout=15).json()["origin"]
-			print(proxy)
-			print(ip)
+				proxies={"http": proxy,"https": proxy}, timeout=15)#.json()["origin"]
 			return True
 		except Exception as e:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
 
+	def get_free_proxy_list_net(self):
+		dummy_sess = self.sess
+		try:
+			html = dummy_sess.get("https://free-proxy-list.net", headers=self.headers,  timeout=60).text
+			pxy = html.split("</textarea>")[0].split(">")[-1]
+			input(pxy)
+			return True
+		except Exception as e:
+			open(log_file, "a").write(str(e)+"\n")
+			return False
 
 
 def clr():
@@ -52,16 +60,16 @@ def banner():
  _______________________________________________
 """)
 
-def checkProxy(px, saveTo, proxy):
+def checkProxy(px, saveTo, proxy, viewProgres=True):
 	global success, filed
 	status = px.check(proxy)
-	print(proxy)
 	if status:
-		open(saveTo, 'a').write("\n"+proxy)
+		open(saveTo+"/live.txt", 'a').write("\n"+proxy)
 		success+=1
 	else:
+		open(saveTo+"/die.txt", 'a').write("\n"+proxy)
 		filed+=1
-	print(f"\n [Success >> {str(success)}]--[Total >> {str(total)}]--[Filed >> {str(filed)}]")
+	if viewProgres: print(f"\n [Success >> {str(success)}]--[Total >> {str(total)}]--[Filed >> {str(filed)}]--[{proxy}]")
 
 
 def loadProxy(path):
@@ -76,19 +84,18 @@ def loadProxy(path):
 
 def setSave():
 	saveTo = str(input(" Save to : "))
-	if saveTo.split(".")[-1] != "txt": saveTo+=".txt"
+	if saveTo.split(".")[-1] == "txt": saveTo = saveTo[:-4]
 	try:
-		open(saveTo, "r").read()
-		x = str(input(" File "+saveTo+" already exists\n Are you sure replace it [y/n]")).lower()
+		os.mkdir(saveTo)
+	except:
+		x = str(input(" Folder "+saveTo+" already exists\n Are you sure replace it [y/n] ")).lower()
 		if x == "y":
-			os.remove(saveTo)
+			[os.remove(i) for i in os.listdir(saveTo)]
 		elif x == "n":
 			sys.exit()
 		else:
 			print(" [!] Invalid input")
 			sys.exit()
-	except:
-		pass
 	return saveTo
 
 
