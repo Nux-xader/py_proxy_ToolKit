@@ -36,8 +36,9 @@ class Proxy:
 		dummy_sess = self.sess
 		try:
 			ip = dummy_sess.get(self.url+"/ip", headers=self.headers, 
-				proxies={"http": proxy,"https": proxy}, timeout=15)#.json()["origin"]
-			return True
+				proxies={"http": proxy,"https": proxy}, timeout=15).json()["origin"]
+			if ip == proxy.split(":")[0]: return True
+			return False
 		except Exception as e:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
