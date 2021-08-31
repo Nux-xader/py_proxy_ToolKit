@@ -72,6 +72,59 @@ class Proxy:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
 
+	def get_hidemy_name(self, page=""):
+		dummy_sess = self.sess
+		if str(page) not in ["0", "1"]:
+			page = f"/?start={str(page)}#list"
+		else:
+			page = ""
+		url = "https://hidemy.name/en/proxy-list"+page
+		print(url)
+		try:
+			html = dummy_sess.get(url, headers=self.headers,  timeout=60).text
+			html = html.split("<tbody id=list>")[-1].split("</tbody>")[0]
+			if ("tr" not in html) or ("td" not in html) or (len(html) < 15): return False
+			html = [i+"</tr>" for i in html.split("</tr>") if len(i) > 2]
+			result = []
+			for x in html:
+				proxy = ""
+				data = [y for y in [x.split(">")[-1] for x in x.split("<")] if len(y) > 3]
+				if (not data[1].isdigit()) or (len(data) < 3): continue
+				proxy+=data[0]+":"+data[1]
+				for y in data[2:]:
+					y = y.lower()
+					if ('socks4' in y) or ('http' in y) or ('socks5' in y):
+						if "," in y:
+							y = y.replace(" ", "").split(",")
+						else:
+							y = [y]
+						for z in y:
+							if "sock" in z:
+								xy = z+"://"+proxy
+							else:
+								xy = proxy
+							result.append(xy)
+			result = list(set(result))
+			return result
+		except Exception as e:
+			open(log_file, "a").write(str(e)+"\n")
+			return False
+
+
+	def format_proxy(self, proxy):
+		data = list(set([i.lower() for i in proxy]))
+		duplicate = len(proxy)-len(data)
+		result = dict()
+		for x in data:
+			if "sock" in x:
+				 if x.split(':', 1)[0] not in result.keys(): result[x.split(':', 1)[0]] = []
+				 result[x.split(':', 1)[0]].append(x)
+			else:
+				if "http" not in result.keys(): result["http"] = []
+				result["http"].append(x)
+		return result, duplicate
+
+
 
 def clr():
 	os.system('cls' if os.name == 'nt' else 'clear')
@@ -147,6 +200,8 @@ def main():
  [1] Proxy checker
  [2] Scrape from free-proxy-list.net
  [3] Scrape from proxylist.geonode
+ [4] Scrape from hidemy.name
+ [5] Auto format random proxy
  [0] Exit
 """)
 		success, filed, total = 0, 0, 0
@@ -169,8 +224,6 @@ def main():
 		elif choice == "3":
 			px = Proxy()
 			saveTo = setSave()
-			# t = setThread()
-			# with thrd(max_workers=t) as pool:
 			num = 1
 			saveTo+="/result.txt"
 			clr()
@@ -186,6 +239,37 @@ def main():
 			banner()
 			print(f" Succes get : {total} Proxies\n Save To    : {saveTo}")
 			input(" [Press Enter to Continue]")
+
+		elif choice == "4":
+			px = Proxy()
+			saveTo = setSave()
+			saveTo+="/result.txt"
+			num = 1
+			clr()
+			banner()
+			while True:
+				print(f" Get >>{total}<< Proxies")
+				result = px.get_hidemy_name(num)
+				if not result: break
+				[open(saveTo, 'a').write("\n"+i) for i in result]
+				total+=len(result)
+				num+=1
+			clr()
+			banner()
+			print(f" Succes get : {total} Proxies\n Save To    : {saveTo}")
+			input(" [Press Enter to Continue]")
+
+		elif choice == "5":
+			data = loadProxy(str(input(" File list proxy : ")))
+			saveTo = setSave()
+			result, duplicate = Proxy().format_proxy(data)
+			for x in result.keys():
+				if len(result[x]) > 0: [open(saveTo+"/"+x+".txt", "a").write(y+"\n") for y in result[x]]
+			clr()
+			banner()
+			print(" Duplicate proxy : "+str(duplicate))
+			[print(" "+x+" : "+str(len(result[x]))) for x in result.keys()]
+			input(" Save to : "+saveTo+"\n [Press Enter to Continue]") 	
 
 		elif choice == "0":
 			break
