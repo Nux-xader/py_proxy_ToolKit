@@ -54,6 +54,24 @@ class Proxy:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
 
+	def get_proxylist_geonode(self, page):
+		dummy_sess = self.sess
+		result = []
+		try:
+			response = dummy_sess.get(
+				f"https://proxylist.geonode.com/api/proxy-list?limit=50&page={str(page)}&sort_by=lastChecked&sort_type=desc", 
+				headers=self.headers,  timeout=60).json()["data"]
+			if len(response) < 1: return False
+			for x in response:
+				if "sock" in x["protocols"][0]:
+					result.append(x["protocols"][0]+"://"+x["ip"]+":"+x["port"])
+				else:
+					result.append(x["ip"]+":"+x["port"])
+			return result
+		except Exception as e:
+			open(log_file, "a").write(str(e)+"\n")
+			return False
+
 
 def clr():
 	os.system('cls' if os.name == 'nt' else 'clear')
@@ -127,7 +145,8 @@ def main():
 		banner()
 		print(""" Menu :
  [1] Proxy checker
- [2] Grab on free-proxy-list.net
+ [2] Scrape from free-proxy-list.net
+ [3] Scrape from proxylist.geonode
  [0] Exit
 """)
 		success, filed, total = 0, 0, 0
@@ -147,6 +166,26 @@ def main():
 			print(result_template.format(str(success), str(filed), str(total), str(saveTo)))
 			input()
 
+		elif choice == "3":
+			px = Proxy()
+			saveTo = setSave()
+			# t = setThread()
+			# with thrd(max_workers=t) as pool:
+			num = 1
+			saveTo+="/result.txt"
+			clr()
+			banner()
+			while True:
+				print(f" Get >>{total}<< Proxies")
+				result = px.get_proxylist_geonode(num)
+				if not result: break
+				[open(saveTo, 'a').write("\n"+i) for i in result]
+				total+=len(result)
+				num+=1
+			clr()
+			banner()
+			print(f" Succes get : {total} Proxies\n Save To    : {saveTo}")
+			input(" [Press Enter to Continue]")
 
 		elif choice == "0":
 			break
