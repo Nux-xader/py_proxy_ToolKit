@@ -4,8 +4,18 @@ from concurrent.futures import ThreadPoolExecutor as thrd
 
 log_file = "proxy_py_log.txt"
 header = {"user-agent": "Mozilla/5.0 (Linux; Android 6.0.1; Redmi Note 3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Mobile Safari/537.36"}
+result_template = """ Result
+ Live    : {}
+ Die     : {}
+ Total   : {}
+ Save to : {}
+ [Press Enter to Continue]
+"""
 try: os.remove(log_file)
 except: pass
+
+
+
 
 class Proxy:
 	def __init__(self):
@@ -36,9 +46,9 @@ class Proxy:
 		dummy_sess = self.sess
 		try:
 			html = dummy_sess.get("https://free-proxy-list.net", headers=self.headers,  timeout=60).text
-			pxy = html.split("</textarea>")[0].split(">")[-1]
-			input(pxy)
-			return True
+			pxy = html.split("</textarea>")[0].split(">")[-1].split("\n\n")[-1]
+			pxy = [i for i in pxy.split("\n") if len(i) > 5]
+			return pxy
 		except Exception as e:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
@@ -90,7 +100,7 @@ def setSave():
 	except:
 		x = str(input(" Folder "+saveTo+" already exists\n Are you sure replace it [y/n] ")).lower()
 		if x == "y":
-			[os.remove(i) for i in os.listdir(saveTo)]
+			[os.remove(saveTo+"/"+i) for i in os.listdir(saveTo)]
 		elif x == "n":
 			sys.exit()
 		else:
@@ -109,25 +119,38 @@ def setThread():
 	return num
 
 
-def menu():
+def main():
 	global success, filed, total
-	clr()
-	banner()
-	print(""" Menu :
+	while True:
+		clr()
+		banner()
+		print(""" Menu :
  [1] Proxy checker
+ [2] Grab on free-proxy-list.net
  [0] Exit
 """)
-	success, filed, total = 0, 0, 0
-	choice = str(input(" Choice : "))
-	if choice == "1":
-		data = loadProxy(str(input(" File list proxy : ")))
-		total = len(data)
-		saveTo = setSave()
-		t = setThread()
-		px = Proxy()
-		with thrd(max_workers=t) as pool:
-			for i in data:
-				pool.submit(checkProxy, px, saveTo, i)
+		success, filed, total = 0, 0, 0
+		choice = str(input(" Choice : "))
+		if choice in ["1", "2"]:
+			px = Proxy()
+			if choice == "1": data = loadProxy(str(input(" File list proxy : ")))
+			if choice == "2": data = px.get_free_proxy_list_net()
+			total = len(data)
+			saveTo = setSave()
+			t = setThread()
+			with thrd(max_workers=t) as pool:
+				for i in data:
+					pool.submit(checkProxy, px, saveTo, i)
+			clr()
+			banner()
+			print(result_template.format(str(success), str(filed), str(total), str(saveTo)))
+			input()
 
 
-menu()
+		elif choice == "0":
+			break
+
+		else:
+			pass
+
+main()
