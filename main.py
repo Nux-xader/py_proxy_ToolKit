@@ -1,5 +1,5 @@
 import requests, sys, os
-from concurrent.futures import ThreadPoolExecutor as thrd
+from concurrent.futures import ThreadPoolExecutor
 
 
 log_file = "proxy_py_log.txt"
@@ -43,6 +43,18 @@ class Proxy:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
 
+
+	def google_checker(self, proxy):
+		dummy_sess = self.sess
+		try:
+			request_google = dummy_sess.get("https://google.com", headers=self.headers, 
+				proxies={"http": proxy,"https": proxy}, timeout=15).json()["origin"]
+			return True
+		except Exception as e:
+			open(log_file, "a").write(str(e)+"\n")
+			return False
+
+
 	def get_free_proxy_list_net(self):
 		dummy_sess = self.sess
 		try:
@@ -79,7 +91,6 @@ class Proxy:
 		else:
 			page = ""
 		url = "https://hidemy.name/en/proxy-list"+page
-		print(url)
 		try:
 			html = dummy_sess.get(url, headers=self.headers,  timeout=60).text
 			html = html.split("<tbody id=list>")[-1].split("</tbody>")[0]
@@ -135,16 +146,20 @@ def banner():
  █▀▀ █▀▄ █▄█ █ █  █ 
  
  █▀█ █▄█
- █▀▀  █  V 1.0.1
+ █▀▀  █  V 1.0.2
 
  About Developer : https://github.com/Nux-xader
  Contact         : https://wa.me/+6281251389915
  _______________________________________________
 """)
 
-def checkProxy(px, saveTo, proxy, viewProgres=True):
+def checkProxy(px, saveTo, proxy, viewProgres=True, google=False):
 	global success, filed
-	status = px.check(proxy)
+	if google:
+		status = px.google_checker(proxy)
+	else:
+		status = px.check(proxy)
+
 	if status:
 		open(saveTo+"/live.txt", 'a').write("\n"+proxy)
 		success+=1
@@ -188,7 +203,7 @@ def setThread():
 			break
 		except:
 			print(" [!] Invalid input")
-	return num
+	return ThreadPoolExecutor(max_workers=num)
 
 
 def main():
@@ -202,6 +217,7 @@ def main():
  [3] Scrape from proxylist.geonode
  [4] Scrape from hidemy.name
  [5] Auto format random proxy
+ [6] Check with google
  [0] Exit
 """)
 		success, filed, total = 0, 0, 0
@@ -212,27 +228,28 @@ def main():
 			if choice == "2": data = px.get_free_proxy_list_net()
 			total = len(data)
 			saveTo = setSave()
-			t = setThread()
-			with thrd(max_workers=t) as pool:
-				for i in data:
-					pool.submit(checkProxy, px, saveTo, i)
+			thrd = setThread()
+			for i in data:
+				thrd.submit(checkProxy, px, saveTo, i)
+
 			clr()
 			banner()
 			print(result_template.format(str(success), str(filed), str(total), str(saveTo)))
-			input()
+			input(" [Press Enter to Continue]")
 
 		elif choice == "3":
 			px = Proxy()
 			saveTo = setSave()
+			thrd = setThread()
 			num = 1
 			saveTo+="/result.txt"
 			clr()
 			banner()
 			while True:
 				print(f" Get >>{total}<< Proxies")
-				result = px.get_proxylist_geonode(num)
+				result = thrd.submit(px.get_proxylist_geonode, num).result()
 				if not result: break
-				[open(saveTo, 'a').write("\n"+i) for i in result]
+				[open(saveTo, 'a').write(i+"\n") for i in result]
 				total+=len(result)
 				num+=1
 			clr()
@@ -243,13 +260,14 @@ def main():
 		elif choice == "4":
 			px = Proxy()
 			saveTo = setSave()
+			thrd = setThread()
 			saveTo+="/result.txt"
 			num = 1
 			clr()
 			banner()
 			while True:
 				print(f" Get >>{total}<< Proxies")
-				result = px.get_hidemy_name(num)
+				result = thrd.submit(px.get_hidemy_name, num).result()
 				if not result: break
 				[open(saveTo, 'a').write("\n"+i) for i in result]
 				total+=len(result)
@@ -269,7 +287,22 @@ def main():
 			banner()
 			print(" Duplicate proxy : "+str(duplicate))
 			[print(" "+x+" : "+str(len(result[x]))) for x in result.keys()]
-			input(" Save to : "+saveTo+"\n [Press Enter to Continue]") 	
+			input(" Save to : "+saveTo+"\n [Press Enter to Continue]")
+
+
+		elif choice == "6":
+			px = Proxy()
+			data = loadProxy(str(input(" File list proxy : ")))
+			total = len(data)
+			saveTo = setSave()
+			thrd = setThread()
+			for i in data:
+				thrd.submit(checkProxy, px, saveTo, i, True, True)
+
+			clr()
+			banner()
+			print(result_template.format(str(success), str(filed), str(total), str(saveTo)))
+			input(" [Press Enter to Continue]")
 
 		elif choice == "0":
 			break
