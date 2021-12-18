@@ -32,13 +32,13 @@ class Proxy:
 			open(log_file, "a").write(str(e)+"\n")
 			sys.exit()
 
-	def check(self, proxy):
+	def check(self, proxy, url):
 		dummy_sess = self.sess
 		try:
-			ip = dummy_sess.get(self.url+"/ip", headers=self.headers, 
+			ip = dummy_sess.get(url, headers=self.headers, 
 				proxies={"http": proxy,"https": proxy}, timeout=15).json()["origin"]
-			if ip == proxy.split(":")[0]: return True
-			return False
+			# if ip == proxy.split(":")[0]: return True
+			return True
 		except Exception as e:
 			open(log_file, "a").write(str(e)+"\n")
 			return False
@@ -153,12 +153,12 @@ def banner():
  _______________________________________________
 """)
 
-def checkProxy(px, saveTo, proxy, viewProgres=True, google=False):
+def checkProxy(px, saveTo, proxy, checker_url, viewProgres=True, google=False):
 	global success, filed
 	if google:
 		status = px.google_checker(proxy)
 	else:
-		status = px.check(proxy)
+		status = px.check(proxy, checker_url)
 
 	if status:
 		open(saveTo+"/live.txt", 'a').write("\n"+proxy)
@@ -224,13 +224,14 @@ def main():
 		choice = str(input(" Choice : "))
 		if choice in ["1", "2"]:
 			px = Proxy()
-			if choice == "1": data = loadProxy(str(input(" File list proxy : ")))
+			checker_url = str(input(" Masukkan url untuk test checker : "))
+			if choice == "1":data = loadProxy(str(input(" File list proxy : ")))
 			if choice == "2": data = px.get_free_proxy_list_net()
 			total = len(data)
 			saveTo = setSave()
 			thrd = setThread()
 			for i in data:
-				thrd.submit(checkProxy, px, saveTo, i)
+				thrd.submit(checkProxy, px, saveTo, i, checker_url)
 
 			clr()
 			banner()
